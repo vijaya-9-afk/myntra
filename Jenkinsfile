@@ -2,14 +2,14 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB = 'vijay3247/myntra'   // change to your DockerHub repo
+        DOCKER_HUB = 'vijaya9494/myntra'   // change to your DockerHub repo
         DOCKER_CREDENTIALS = credentials('dockerhub-credentials') // Jenkins credentials ID
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/vijay254452/myntra.git'
+                git branch: 'main', url: 'https://github.com/vijaya-9-afk/myntra.git'
             }
         }
 
@@ -43,4 +43,3 @@ pipeline {
         }
     }
 }
-
