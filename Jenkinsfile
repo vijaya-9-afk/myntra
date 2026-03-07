@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_HUB = 'vijaya9494/myntra'   // change to your DockerHub repo
-        DOCKER_CREDENTIALS = credentials('dockerhub-credentials') // Jenkins credentials ID
+        DOCKER_CREDENTIALS = credentials('docker-hub') // Jenkins credentials ID
     }
 
     stages {
