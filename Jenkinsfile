@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = "docker_cred"   // ✅ correct credential ID
+        DOCKERHUB_CREDENTIALS = "vijaya9494"   // ✅ correct credential ID
         IMAGE_NAME = "myntraimg"
         IMAGE_TAG = "${BUILD_NUMBER}"           // ✅ better than latest
     }
