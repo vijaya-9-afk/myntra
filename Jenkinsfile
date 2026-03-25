@@ -9,7 +9,7 @@ pipeline {
         
         // Email configuration
         EMAIL_FROM = "vijayakanthi9533@gmail.com"          // Replace with your Gmail
-        EMAIL_USER = "devapulupureddy.com"          // Gmail username
+        EMAIL_USER = "vijayakanthi9533@gmail.com"          // Gmail username
         EMAIL_PASSWORD = "kawgqjpwakflfema"        // Gmail App Password
         SMTP_HOST = "smtp.gmail.com"
         SMTP_PORT = "587"
