@@ -2,76 +2,52 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = "vijaya9494"    // Your Docker Hub credential ID
+        DOCKERHUB_CREDENTIALS = "vijaya9494"
         IMAGE_NAME = "myntraimg"
-        IMAGE_TAG = "${BUILD_NUMBER}"           // Unique per build
+        IMAGE_TAG = "latest"
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/vijaya-9-afk/myntra.git'
+                git branch: 'main', url: 'https://github.com/sai798187/hotstar.git'
             }
         }
-
-        stage('Build Artifact') {
+        stage('creating-artifact') {
             steps {
                 sh 'mvn clean package'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Image') {
             steps {
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
-        stage('Push Docker Image') {
+      stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: "${DOCKERHUB_CREDENTIALS}",
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
-                        docker push $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker tag hotstarimg:latest $DOCKER_USER/hotstarimg:latest
+                        docker push $DOCKER_USER/hotstarimg:latest
                         docker logout
                     '''
                 }
             }
         }
-
         stage('K8s Deployment') {
-            steps {
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    sh '''
-                        echo "Using KUBECONFIG: $KUBECONFIG"
-                        kubectl get nodes
-
-                        # Find manifest dynamically or use a fixed path
-                        MANIFEST=$(find . -name "myntra.yml" | head -n 1)
-                        if [ -z "$MANIFEST" ]; then
-                            echo "Error: myntra.yml not found!"
-                            exit 1
-                        fi
-
-                        echo "Deploying using manifest: $MANIFEST"
-                        kubectl apply -f $MANIFEST
-                    '''
+         steps {
+            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                sh '''
+                export KUBECONFIG=$KUBECONFIG
+                kubectl get nodes
+                kubectl apply -f hotstar.yml
+                '''
                 }
             }
         }
-    }
-
-    post {
-        success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed. Check logs!'
-        }
-    }
+     }
 }
