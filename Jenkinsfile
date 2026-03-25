@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "myntraimg:latest"
         KUBE_MANIFEST = "myntra.yml"
-        Email_details = "gmail-creds"
+        EMAIL_TO = "vijayakanthi9533@gmail.com"
     }
 
     stages {
@@ -13,15 +13,6 @@ pipeline {
                 git url: 'https://github.com/vijaya-9-afk/myntra.git',
                     branch: 'main',
                     credentialsId: 'vijaya9494'
-            }
-             post {
-                success {
-                    emailext(
-                        subject: "Checkout Success",
-                        body: "Checkout completed",
-                        to: "${Email_details}"
-                    )
-                }
             }
         }
 
@@ -41,9 +32,11 @@ pipeline {
             steps {
                 script {
                     try {
-                        withCredentials([usernamePassword(credentialsId: 'docker-creds',
-                                                         usernameVariable: 'DOCKER_USER',
-                                                         passwordVariable: 'DOCKER_PASS')]) {
+                        withCredentials([usernamePassword(
+                            credentialsId: 'docker-creds',
+                            usernameVariable: 'DOCKER_USER',
+                            passwordVariable: 'DOCKER_PASS'
+                        )]) {
                             sh '''
                                 echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                                 docker tag ${DOCKER_IMAGE} $DOCKER_USER/${DOCKER_IMAGE}
@@ -52,7 +45,7 @@ pipeline {
                             '''
                         }
                     } catch (e) {
-                        echo "Docker credentials missing or login failed! Skipping Docker push."
+                        echo "Docker credentials missing! Skipping Docker push."
                     }
                 }
             }
@@ -70,10 +63,24 @@ pipeline {
                             '''
                         }
                     } catch (e) {
-                        echo "Kubernetes deployment failed or kubeconfig missing."
+                        echo "Kubernetes deployment failed."
                     }
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            emailext(
+                subject: "Jenkins Build: ${currentBuild.currentResult}",
+                body: """Build Status: ${currentBuild.currentResult}
+
+Job: ${env.JOB_NAME}
+Build URL: ${env.BUILD_URL}
+""",
+                to: "${EMAIL_TO}"
+            )
         }
     }
 }
