@@ -11,7 +11,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/sai798187/hotstar.git'
+                git branch: 'main', url: 'https://github.com/vijaya-9-afk/myntra.git'
             }
         }
         stage('creating-artifact') {
