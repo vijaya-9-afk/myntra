@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = "vijaya9494"   // ✅ correct credential ID
+        DOCKERHUB_CREDENTIALS = "vijaya9494"
         IMAGE_NAME = "myntraimg"
-        IMAGE_TAG = "${BUILD_NUMBER}"           // ✅ better than latest
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
@@ -56,21 +56,10 @@ pipeline {
         }
     }
 
+    // Disabled email to prevent failures until SMTP is configured
     post {
         always {
-            echo "Pipeline execution completed"
-        }
-
-        success {
-            mail to: 'devapulupureddy@gmail.com',
-                 subject: "Jenkins SUCCESS: ${env.JOB_NAME}",
-                 body: "Build succeeded: ${env.BUILD_URL}"
-        }
-
-        failure {
-            mail to: 'devapulupureddy@gmail.com',
-                 subject: "Jenkins FAILURE: ${env.JOB_NAME}",
-                 body: "Build failed: ${env.BUILD_URL}"
+            echo 'Pipeline finished.'
         }
     }
 }
