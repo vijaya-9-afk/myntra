@@ -44,7 +44,7 @@ pipeline {
                             '''
                         }
                     } catch (e) {
-                        echo "Docker credentials missing or login failed! Skipping Docker push."
+                        echo "Docker credentials missing! Skipping Docker push."
                     }
                 }
             }
@@ -69,7 +69,12 @@ pipeline {
         always {
             mail to: 'vijayakanthi9533@gmail.com',
                  subject: "Jenkins ${env.JOB_NAME} - ${currentBuild.currentResult}",
-                 body: "Build Status: ${currentBuild.currentResult}\n\nCheck details: ${env.BUILD_URL}"
+                 body: """Build Status: ${currentBuild.currentResult}
+                         
+Job: ${env.JOB_NAME}
+Build Number: ${env.BUILD_NUMBER}
+Check Console: ${env.BUILD_URL}
+"""
         }
     }
 }
