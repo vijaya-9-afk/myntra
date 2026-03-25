@@ -2,16 +2,17 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = "vijaya9494"   // ✅ correct credential ID
-        IMAGE_NAME = "myntraimg"
-        IMAGE_TAG = "${BUILD_NUMBER}"           // ✅ better than latest
+        DOCKER_IMAGE = "vijaya9494/myntraimg"
+        DOCKER_TAG = "latest"
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
-                git branch: 'main', url: 'https://github.com/vijaya-9-afk/myntra.git'
+                git url: 'https://github.com/vijaya-9-afk/myntra.git',
+                    credentialsId: 'vijaya9494',
+                    branch: 'main'
             }
         }
 
@@ -21,25 +22,23 @@ pipeline {
             }
         }
 
-        stage('Build Image') {
+        stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                script {
+                    sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: "${DOCKERHUB_CREDENTIALS}",
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
+                withCredentials([usernamePassword(credentialsId: 'docker_cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
-                        docker push $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
                         docker logout
-                    '''
+                    """
                 }
             }
         }
@@ -47,30 +46,22 @@ pipeline {
         stage('K8s Deployment') {
             steps {
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    sh '''
-                        kubectl get nodes
-                        kubectl apply -f myntra.yml
-                    '''
+                    sh "kubectl apply -f myntra.yml"
                 }
             }
         }
     }
 
     post {
-        always {
-            echo "Pipeline execution completed"
-        }
-
         success {
-            mail to: 'devapulupureddy@gmail.com',
-                 subject: "Jenkins SUCCESS: ${env.JOB_NAME}",
-                 body: "Build succeeded: ${env.BUILD_URL}"
+            mail to: 'your-email@example.com',
+                 subject: "Jenkins Pipeline SUCCESS: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                 body: "The pipeline completed successfully.\n\nCheck build details: ${env.BUILD_URL}"
         }
-
         failure {
-            mail to: 'devapulupureddy@gmail.com',
-                 subject: "Jenkins FAILURE: ${env.JOB_NAME}",
-                 body: "Build failed: ${env.BUILD_URL}"
+            mail to: 'your-email@example.com',
+                 subject: "Jenkins Pipeline FAILURE: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                 body: "The pipeline failed.\n\nCheck build details: ${env.BUILD_URL}"
         }
     }
 }
