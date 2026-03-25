@@ -4,8 +4,6 @@ pipeline {
     environment {
         DOCKER_IMAGE = "myntraimg:latest"
         KUBE_MANIFEST = "myntra.yml"
-        EMAIL_TO = "vijayakanthi9533@gmail.com" // your email
-        EMAIL_FROM = "vijayakanthi9533@gmail.com"
     }
 
     stages {
