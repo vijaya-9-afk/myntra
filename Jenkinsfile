@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "myntraimg:latest"
         KUBE_MANIFEST = "myntra.yml"
-        EMAIL_TO = "vijayakanthi9533@gmail.com"
+        EMAIL_TO = "vijayakanthi9533@gmail.com" // your email
         EMAIL_FROM = "vijayakanthi9533@gmail.com"
     }
 
@@ -18,11 +18,15 @@ pipeline {
         }
 
         stage('Build Artifact') {
-            steps { sh 'mvn clean package' }
+            steps {
+                sh 'mvn clean package'
+            }
         }
 
         stage('Build Docker Image') {
-            steps { sh "docker build -t ${DOCKER_IMAGE} ." }
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE} ."
+            }
         }
 
         stage('Push Docker Image') {
@@ -49,12 +53,16 @@ pipeline {
         stage('K8s Deployment') {
             steps {
                 script {
-                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                        sh '''
-                            export KUBECONFIG=$KUBECONFIG
-                            kubectl get nodes
-                            kubectl apply -f ${KUBE_MANIFEST}
-                        '''
+                    try {
+                        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                            sh '''
+                                export KUBECONFIG=$KUBECONFIG
+                                kubectl get nodes
+                                kubectl apply -f ${KUBE_MANIFEST}
+                            '''
+                        }
+                    } catch (e) {
+                        echo "Kubernetes deployment failed or kubeconfig missing."
                     }
                 }
             }
@@ -62,24 +70,50 @@ pipeline {
     }
 
     post {
-        always {
+        success {
             script {
-                // Send email regardless of pipeline success/failure
-                withCredentials([usernamePassword(credentialsId: 'email-creds',
-                                                 usernameVariable: 'MAIL_USER',
-                                                 passwordVariable: 'MAIL_PASS')]) {
-                    def status = currentBuild.currentResult
-                    mail to: EMAIL_TO,
-                         from: EMAIL_FROM,
-                         replyTo: EMAIL_FROM,
-                         subject: "Pipeline ${status}: myntra",
-                         body: "The Jenkins pipeline has ${status}!\n\nBuild URL: ${env.BUILD_URL}",
-                         mimeType: 'text/plain',
-                         smtpHost: 'smtp.gmail.com',
-                         smtpPort: '587',
-                         smtpAuthUser: MAIL_USER,
-                         smtpAuthPassword: MAIL_PASS,
-                         useTls: true
+                try {
+                    withCredentials([usernamePassword(credentialsId: 'email-creds',
+                                                     usernameVariable: 'MAIL_USER',
+                                                     passwordVariable: 'MAIL_PASS')]) {
+                        mail to: EMAIL_TO,
+                             from: EMAIL_FROM,
+                             replyTo: EMAIL_FROM,
+                             subject: "Pipeline Success: myntra",
+                             body: "The Jenkins pipeline has succeeded!\n\nCheck the build at: ${env.BUILD_URL}",
+                             mimeType: 'text/plain',
+                             smtpHost: 'smtp.gmail.com',
+                             smtpPort: '587',
+                             smtpAuthUser: MAIL_USER,
+                             smtpAuthPassword: MAIL_PASS,
+                             useTls: true
+                    }
+                } catch (e) {
+                    echo "Email credentials missing! Skipping success email."
+                }
+            }
+        }
+
+        failure {
+            script {
+                try {
+                    withCredentials([usernamePassword(credentialsId: 'email-creds',
+                                                     usernameVariable: 'MAIL_USER',
+                                                     passwordVariable: 'MAIL_PASS')]) {
+                        mail to: EMAIL_TO,
+                             from: EMAIL_FROM,
+                             replyTo: EMAIL_FROM,
+                             subject: "Pipeline Failure: myntra",
+                             body: "The Jenkins pipeline has failed!\n\nCheck the build at: ${env.BUILD_URL}",
+                             mimeType: 'text/plain',
+                             smtpHost: 'smtp.gmail.com',
+                             smtpPort: '587',
+                             smtpAuthUser: MAIL_USER,
+                             smtpAuthPassword: MAIL_PASS,
+                             useTls: true
+                    }
+                } catch (e) {
+                    echo "Email credentials missing! Skipping failure email."
                 }
             }
         }
