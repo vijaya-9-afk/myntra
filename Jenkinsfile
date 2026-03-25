@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = "vijaya9494"
+        DOCKERHUB_CREDENTIALS = "docker_cred"   // ✅ correct credential ID
         IMAGE_NAME = "myntraimg"
-        IMAGE_TAG = "latest"
+        IMAGE_TAG = "${BUILD_NUMBER}"           // ✅ better than latest
     }
 
     stages {
@@ -14,7 +14,8 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/vijaya-9-afk/myntra.git'
             }
         }
-        stage('creating-artifact') {
+
+        stage('Build Artifact') {
             steps {
                 sh 'mvn clean package'
             }
@@ -26,53 +27,50 @@ pipeline {
             }
         }
 
-      stage('Push Docker Image') {
+        stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: "${DOCKERHUB_CREDENTIALS}",
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
                     sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker tag hotstarimg:latest $DOCKER_USER/hotstarimg:latest
-                        docker push $DOCKER_USER/hotstarimg:latest
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
                         docker logout
                     '''
                 }
             }
         }
+
         stage('K8s Deployment') {
-         steps {
-            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                sh '''
-                export KUBECONFIG=$KUBECONFIG
-                kubectl get nodes
-                kubectl apply -f hotstar.yml
-                '''
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    sh '''
+                        kubectl get nodes
+                        kubectl apply -f myntra.yml
+                    '''
                 }
             }
         }
-     }
+    }
 
     post {
-
         always {
             echo "Pipeline execution completed"
         }
 
         success {
-            echo "Build SUCCESS "
             mail to: 'devapulupureddy@gmail.com',
                  subject: "Jenkins SUCCESS: ${env.JOB_NAME}",
                  body: "Build succeeded: ${env.BUILD_URL}"
         }
 
         failure {
-            echo "Build FAILED "
             mail to: 'devapulupureddy@gmail.com',
                  subject: "Jenkins FAILURE: ${env.JOB_NAME}",
                  body: "Build failed: ${env.BUILD_URL}"
-        }
-
-        unstable {
-            echo "Build UNSTABLE "
         }
     }
 }
