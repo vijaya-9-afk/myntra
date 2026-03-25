@@ -44,7 +44,7 @@ pipeline {
                 sh '''
                 export KUBECONFIG=$KUBECONFIG
                 kubectl get nodes
-                kubectl apply -f hotstar.yml
+                kubectl apply -f myntra.yml
                 '''
                 }
             }
