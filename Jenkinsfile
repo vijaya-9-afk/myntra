@@ -13,7 +13,7 @@ pipeline {
             }
         }
 
-        stage('Create Artifact') {
+        stage('Build Artifact') {
             steps {
                 sh 'mvn clean package'
             }
@@ -54,34 +54,20 @@ pipeline {
     post {
         success {
             echo 'Pipeline Succeeded! Sending email...'
-            withCredentials([usernamePassword(credentialsId: 'gmail-creds', usernameVariable: 'SMTP_USER', passwordVariable: 'SMTP_PASS')]) {
-                mail to: 'recipient@example.com',
-                     subject: 'Pipeline Success',
-                     body: 'The Jenkins pipeline has succeeded!',
-                     from: 'vijayakanthi9533@gmail.com',
-                     replyTo: 'vijayakanthi9533@gmail.com',
-                     smtpHost: 'smtp.gmail.com',
-                     smtpPort: '587',
-                     smtpUsername: SMTP_USER,
-                     smtpPassword: SMTP_PASS,
-                     smtpTls: true
-            }
+            mail to: 'recipient@example.com',
+                 subject: 'Pipeline Success',
+                 body: 'The Jenkins pipeline has succeeded!',
+                 from: 'vijayakanthi9533@gmail.com',
+                 replyTo: 'vijayakanthi9533@gmail.com'
         }
 
         failure {
             echo 'Pipeline Failed! Sending email...'
-            withCredentials([usernamePassword(credentialsId: 'gmail-creds', usernameVariable: 'SMTP_USER', passwordVariable: 'SMTP_PASS')]) {
-                mail to: 'recipient@example.com',
-                     subject: 'Pipeline Failure',
-                     body: 'The Jenkins pipeline has failed!',
-                     from: 'vijayakanthi9533@gmail.com',
-                     replyTo: 'vijayakanthi9533@gmail.com',
-                     smtpHost: 'smtp.gmail.com',
-                     smtpPort: '587',
-                     smtpUsername: SMTP_USER,
-                     smtpPassword: SMTP_PASS,
-                     smtpTls: true
-            }
+            mail to: 'recipient@example.com',
+                 subject: 'Pipeline Failure',
+                 body: 'The Jenkins pipeline has failed!',
+                 from: 'vijayakanthi9533@gmail.com',
+                 replyTo: 'vijayakanthi9533@gmail.com'
         }
     }
 }
