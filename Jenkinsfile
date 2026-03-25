@@ -2,48 +2,77 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB = 'vijaya9494/myntra'   // change to your DockerHub repo
-        DOCKER_CREDENTIALS = 'docker-hub' // Jenkins credentials ID
+        DOCKERHUB_CREDENTIALS = "vijaya9494"
+        IMAGE_NAME = "myntraimg"
+        IMAGE_TAG = "latest"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/vijaya-9-afk/myntra.git'
+                git branch: 'main', url: 'https://github.com/vijaya-9-afk/hotstar.git'
+            }
+        }
+        stage('creating-artifact') {
+            steps {
+                sh 'mvn clean package'
             }
         }
 
-        stage('Build WAR') {
+        stage('Build Image') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
-        stage('Build Docker Image') {
+      stage('Push Docker Image') {
             steps {
-                sh 'docker build -t $DOCKER_HUB:latest .'
-            }
-        }
-
-       stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker push ${DOCKER_HUB}:latest
+                        docker tag hotstarimg:latest $DOCKER_USER/hotstarimg:latest
+                        docker push $DOCKER_USER/hotstarimg:latest
                         docker logout
                     '''
                 }
             }
         }
-
-        stage('Deploy Local Container') {
-            steps {
+        stage('K8s Deployment') {
+         steps {
+            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                 sh '''
-                docker rm -f myntra || true
-                docker run -d --name myntra -p 8777:8080 $DOCKER_HUB:latest
+                export KUBECONFIG=$KUBECONFIG
+                kubectl get nodes
+                kubectl apply -f hotstar.yml
                 '''
+                }
             }
+        }
+     }
+
+    post {
+
+        always {
+            echo "Pipeline execution completed"
+        }
+
+        success {
+            echo "Build SUCCESS "
+            mail to: 'devapulupureddy@gmail.com',
+                 subject: "Jenkins SUCCESS: ${env.JOB_NAME}",
+                 body: "Build succeeded: ${env.BUILD_URL}"
+        }
+
+        failure {
+            echo "Build FAILED "
+            mail to: 'devapulupureddy@gmail.com',
+                 subject: "Jenkins FAILURE: ${env.JOB_NAME}",
+                 body: "Build failed: ${env.BUILD_URL}"
+        }
+
+        unstable {
+            echo "Build UNSTABLE "
         }
     }
 }
