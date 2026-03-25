@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "myntraimg:latest"
         KUBE_MANIFEST = "myntra.yml"
+        Email_details = "gmail-creds"
     }
 
     stages {
@@ -18,7 +19,7 @@ pipeline {
                     emailext(
                         subject: "Checkout Success",
                         body: "Checkout completed",
-                        to: "vijayakanthi9533@gmail.com"
+                        to: "${Email_details}"
                     )
                 }
             }
