@@ -32,16 +32,20 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    // Make sure docker-creds exists in Jenkins credentials
-                    withCredentials([usernamePassword(credentialsId: 'docker-creds', 
-                                                     usernameVariable: 'DOCKER_USER', 
-                                                     passwordVariable: 'DOCKER_PASS')]) {
-                        sh '''
-                            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                            docker tag ${DOCKER_IMAGE} $DOCKER_USER/${DOCKER_IMAGE}
-                            docker push $DOCKER_USER/${DOCKER_IMAGE}
-                            docker logout
-                        '''
+                    try {
+                        withCredentials([usernamePassword(credentialsId: 'docker-creds', 
+                                                         usernameVariable: 'DOCKER_USER', 
+                                                         passwordVariable: 'DOCKER_PASS')]) {
+                            sh '''
+                                echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                                docker tag ${DOCKER_IMAGE} $DOCKER_USER/${DOCKER_IMAGE}
+                                docker push $DOCKER_USER/${DOCKER_IMAGE}
+                                docker logout
+                            '''
+                        }
+                    } catch (Exception e) {
+                        echo "Docker credentials missing or login failed! Skipping Docker push."
+                        echo "Error details: ${e}"
                     }
                 }
             }
@@ -50,13 +54,17 @@ pipeline {
         stage('K8s Deployment') {
             steps {
                 script {
-                    // Make sure kubeconfig file exists in Jenkins credentials
-                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                        sh '''
-                            export KUBECONFIG=$KUBECONFIG
-                            kubectl get nodes
-                            kubectl apply -f ${KUBE_MANIFEST}
-                        '''
+                    try {
+                        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                            sh '''
+                                export KUBECONFIG=$KUBECONFIG
+                                kubectl get nodes
+                                kubectl apply -f ${KUBE_MANIFEST}
+                            '''
+                        }
+                    } catch (Exception e) {
+                        echo "Kubernetes credentials missing or deployment failed! Skipping K8s deployment."
+                        echo "Error details: ${e}"
                     }
                 }
             }
@@ -67,20 +75,25 @@ pipeline {
         success {
             echo 'Pipeline Succeeded! Sending email...'
             script {
-                withCredentials([usernamePassword(credentialsId: 'email-creds', 
-                                                 usernameVariable: 'MAIL_USER', 
-                                                 passwordVariable: 'MAIL_PASS')]) {
-                    mail to: EMAIL_TO,
-                         from: EMAIL_FROM,
-                         replyTo: EMAIL_FROM,
-                         subject: 'Pipeline Success',
-                         body: 'The Jenkins pipeline has succeeded!',
-                         mimeType: 'text/plain',
-                         smtpHost: 'smtp.gmail.com',
-                         smtpPort: '587',
-                         smtpAuthUser: MAIL_USER,
-                         smtpAuthPassword: MAIL_PASS,
-                         useTls: true
+                try {
+                    withCredentials([usernamePassword(credentialsId: 'email-creds', 
+                                                     usernameVariable: 'MAIL_USER', 
+                                                     passwordVariable: 'MAIL_PASS')]) {
+                        mail to: EMAIL_TO,
+                             from: EMAIL_FROM,
+                             replyTo: EMAIL_FROM,
+                             subject: 'Pipeline Success',
+                             body: 'The Jenkins pipeline has succeeded!',
+                             mimeType: 'text/plain',
+                             smtpHost: 'smtp.gmail.com',
+                             smtpPort: '587',
+                             smtpAuthUser: MAIL_USER,
+                             smtpAuthPassword: MAIL_PASS,
+                             useTls: true
+                    }
+                } catch (Exception e) {
+                    echo "Email credentials missing! Skipping success email."
+                    echo "Error details: ${e}"
                 }
             }
         }
@@ -88,20 +101,25 @@ pipeline {
         failure {
             echo 'Pipeline Failed! Sending email...'
             script {
-                withCredentials([usernamePassword(credentialsId: 'email-creds', 
-                                                 usernameVariable: 'MAIL_USER', 
-                                                 passwordVariable: 'MAIL_PASS')]) {
-                    mail to: EMAIL_TO,
-                         from: EMAIL_FROM,
-                         replyTo: EMAIL_FROM,
-                         subject: 'Pipeline Failure',
-                         body: 'The Jenkins pipeline has failed!',
-                         mimeType: 'text/plain',
-                         smtpHost: 'smtp.gmail.com',
-                         smtpPort: '587',
-                         smtpAuthUser: MAIL_USER,
-                         smtpAuthPassword: MAIL_PASS,
-                         useTls: true
+                try {
+                    withCredentials([usernamePassword(credentialsId: 'email-creds', 
+                                                     usernameVariable: 'MAIL_USER', 
+                                                     passwordVariable: 'MAIL_PASS')]) {
+                        mail to: EMAIL_TO,
+                             from: EMAIL_FROM,
+                             replyTo: EMAIL_FROM,
+                             subject: 'Pipeline Failure',
+                             body: 'The Jenkins pipeline has failed!',
+                             mimeType: 'text/plain',
+                             smtpHost: 'smtp.gmail.com',
+                             smtpPort: '587',
+                             smtpAuthUser: MAIL_USER,
+                             smtpAuthPassword: MAIL_PASS,
+                             useTls: true
+                    }
+                } catch (Exception e) {
+                    echo "Email credentials missing! Skipping failure email."
+                    echo "Error details: ${e}"
                 }
             }
         }
