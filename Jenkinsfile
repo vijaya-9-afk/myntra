@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = "vijaya9494"   // DockerHub credentials ID
+        DOCKERHUB_CREDENTIALS = "vijaya9494"    // Your Docker Hub credential ID
         IMAGE_NAME = "myntraimg"
-        IMAGE_TAG = "${BUILD_NUMBER}"           // Use build number for tagging
+        IMAGE_TAG = "${BUILD_NUMBER}"           // Unique per build
     }
 
     stages {
@@ -51,7 +51,7 @@ pipeline {
                         echo "Using KUBECONFIG: $KUBECONFIG"
                         kubectl get nodes
 
-                        # Find the manifest dynamically
+                        # Find manifest dynamically or use a fixed path
                         MANIFEST=$(find . -name "myntra.yml" | head -n 1)
                         if [ -z "$MANIFEST" ]; then
                             echo "Error: myntra.yml not found!"
@@ -68,10 +68,10 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline completed successfully!"
+            echo 'Pipeline completed successfully!'
         }
         failure {
-            echo "Pipeline failed! Check logs for details."
+            echo 'Pipeline failed. Check logs!'
         }
     }
 }
