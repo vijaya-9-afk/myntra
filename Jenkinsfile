@@ -2,17 +2,14 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = "vijaya9494"
-        IMAGE_NAME = "myntraimg"
-        IMAGE_TAG = "latest"
-        EMAIL_RECIPIENTS = "vijayakanti9533@gmail.com"
+        DOCKER_IMAGE = "myntraimg:latest"
+        KUBE_MANIFEST = "myntra.yml"
     }
 
     stages {
-
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
-                git branch: 'main', url: 'https://github.com/vijaya-9-afk/myntra.git'
+                git url: 'https://github.com/vijaya-9-afk/myntra.git', branch: 'main', credentialsId: 'vijaya9494'
             }
         }
 
@@ -24,17 +21,17 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh "docker build -t ${DOCKER_IMAGE} ."
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
-                        docker push $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker tag ${DOCKER_IMAGE} $DOCKER_USER/${DOCKER_IMAGE}
+                        docker push $DOCKER_USER/${DOCKER_IMAGE}
                         docker logout
                     '''
                 }
@@ -47,39 +44,44 @@ pipeline {
                     sh '''
                         export KUBECONFIG=$KUBECONFIG
                         kubectl get nodes
-
-                        MANIFEST=$(find . -name myntra.yml | head -n 1)
-                        if [ -z "$MANIFEST" ]; then
-                            echo "Error: myntra.yml not found!"
-                            exit 1
-                        fi
-
-                        echo "Deploying using manifest: $MANIFEST"
-                        kubectl apply -f $MANIFEST
+                        kubectl apply -f ${KUBE_MANIFEST}
                     '''
                 }
             }
         }
-
     }
 
     post {
         success {
-            echo "Pipeline Succeeded! Sending email..."
-            mail(
-                to: "${EMAIL_RECIPIENTS}",
-                subject: "SUCCESS: Jenkins Pipeline ${JOB_NAME} Build #${BUILD_NUMBER}",
-                body: "Good news! The pipeline ${JOB_NAME} Build #${BUILD_NUMBER} succeeded.\n\nCheck details: ${BUILD_URL}"
-            )
+            echo 'Pipeline Succeeded! Sending email...'
+            withCredentials([usernamePassword(credentialsId: 'gmail-creds', usernameVariable: 'SMTP_USER', passwordVariable: 'SMTP_PASS')]) {
+                mail to: 'recipient@example.com',
+                     subject: 'Pipeline Success',
+                     body: 'The Jenkins pipeline has succeeded!',
+                     from: 'vijayakanthi9533@gmail.com',
+                     replyTo: 'vijayakanthi9533@gmail.com',
+                     smtpHost: 'smtp.gmail.com',
+                     smtpPort: '587',
+                     smtpUsername: SMTP_USER,
+                     smtpPassword: SMTP_PASS,
+                     smtpTls: true
+            }
         }
 
         failure {
-            echo "Pipeline Failed! Sending email..."
-            mail(
-                to: "${EMAIL_RECIPIENTS}",
-                subject: "FAILURE: Jenkins Pipeline ${JOB_NAME} Build #${BUILD_NUMBER}",
-                body: "Oops! The pipeline ${JOB_NAME} Build #${BUILD_NUMBER} failed.\n\nCheck details: ${BUILD_URL}"
-            )
+            echo 'Pipeline Failed! Sending email...'
+            withCredentials([usernamePassword(credentialsId: 'gmail-creds', usernameVariable: 'SMTP_USER', passwordVariable: 'SMTP_PASS')]) {
+                mail to: 'recipient@example.com',
+                     subject: 'Pipeline Failure',
+                     body: 'The Jenkins pipeline has failed!',
+                     from: 'vijayakanthi9533@gmail.com',
+                     replyTo: 'vijayakanthi9533@gmail.com',
+                     smtpHost: 'smtp.gmail.com',
+                     smtpPort: '587',
+                     smtpUsername: SMTP_USER,
+                     smtpPassword: SMTP_PASS,
+                     smtpTls: true
+            }
         }
     }
 }
