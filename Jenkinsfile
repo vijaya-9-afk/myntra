@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "myntraimg:latest"
         KUBE_MANIFEST = "myntra.yml"
-        Email_details = "gmail-creds"
+        Email_details = "gmail"
     }
 
     stages {
